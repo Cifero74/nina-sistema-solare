@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="it" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Avventure nel Sistema Solare</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/three@0.161.0/build/three.min.js"></script>
+  <style>
+    body { margin: 0; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; }
+    #scene { height: 56vh; min-height: 360px; }
+    .timeline-item.active { border-color: rgb(129 140 248); background: rgba(99, 102, 241, .1); }
+  </style>
+</head>
+<body class="bg-gray-950 text-gray-100">
+  <div class="max-w-7xl mx-auto px-4 py-6 space-y-6">
+    <header class="space-y-2">
+      <h1 class="text-3xl font-bold">Avventure spaziali nel Sistema Solare</h1>
+      <p class="text-gray-300 text-base leading-relaxed">Una vista 3D animata del Sistema Solare, con timeline delle missioni che hanno cambiato la nostra comprensione di pianeti, lune e spazio profondo.</p>
+    </header>
+
+    <section class="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+      <div id="scene" aria-label="Rappresentazione 3D animata del sistema solare"></div>
+      <div class="grid md:grid-cols-3 gap-4 p-4 border-t border-gray-800 text-sm text-gray-300">
+        <div><span class="text-indigo-300 font-medium">Animazione:</span> orbite semplificate in scala didattica</div>
+        <div><span class="text-indigo-300 font-medium">Target:</span> <span id="targetPlanet">Nessuno</span></div>
+        <div><span class="text-indigo-300 font-medium">Suggerimento:</span> clicca una milestone per evidenziare il pianeta coinvolto</div>
+      </div>
+    </section>
+
+    <section class="grid lg:grid-cols-5 gap-6">
+      <div class="lg:col-span-3 bg-gray-900 border border-gray-800 rounded-xl p-4 md:p-6">
+        <h2 class="text-2xl font-bold mb-4">Timeline missioni</h2>
+        <div id="timeline" class="space-y-3 max-h-[460px] overflow-y-auto pr-1"></div>
+      </div>
+      <aside class="lg:col-span-2 bg-gray-900 border border-gray-800 rounded-xl p-4 md:p-6 space-y-4">
+        <h2 class="text-2xl font-bold">Scheda missione</h2>
+        <div id="emptyState" class="text-center py-10 text-gray-500">
+          <p class="text-lg">Nessuna missione selezionata.</p>
+          <p class="text-sm mt-1">Seleziona una milestone dalla timeline per vedere dettagli e curiosita'.</p>
+        </div>
+        <article id="card" class="hidden space-y-3">
+          <h3 id="mTitle" class="text-xl font-semibold"></h3>
+          <p id="mMeta" class="text-sm text-indigo-300"></p>
+          <p id="mDesc" class="text-gray-200 leading-relaxed"></p>
+          <p id="mImpact" class="text-sm text-gray-300"></p>
+          <div class="pt-2 border-t border-gray-800">
+            <p class="text-sm"><span class="font-medium text-green-400">Nozione:</span> <span id="mFact"></span></p>
+          </div>
+        </article>
+      </aside>
+    </section>
+  </div>
+
+  <script>
+    const missions = [
+      { year: 1959, name: 'Luna 2', target: 'Terra', type: 'Impatto lunare', description: 'Primo oggetto costruito dall’uomo a raggiungere la superficie della Luna.', impact: 'Apre la fase operativa dell’esplorazione del Sistema Solare.', fact: 'La Luna dista in media 384.400 km dalla Terra.' },
+      { year: 1969, name: 'Apollo 11', target: 'Terra', type: 'Missione umana', description: 'Primo allunaggio con equipaggio umano: Armstrong e Aldrin camminano sulla Luna.', impact: 'Dimostra la possibilita' + "'" + ' di missioni umane fuori dall’orbita terrestre.', fact: 'Il modulo Eagle atterra nel Mare della Tranquillita'.' },
+      { year: 1976, name: 'Viking 1', target: 'Marte', type: 'Lander', description: 'Prima missione di lunga durata sulla superficie marziana con dati e immagini dettagliate.', impact: 'Costruisce le basi della geologia marziana moderna.', fact: 'Viking 1 ha operato sulla superficie per oltre 6 anni terrestri.' },
+      { year: 1977, name: 'Voyager 2', target: 'Nettuno', type: 'Flyby multiplo', description: 'Sorvola Giove, Saturno, Urano e Nettuno, unica sonda ad aver visitato tutti i giganti esterni.', impact: 'Rivoluziona la visione delle lune ghiacciate e delle atmosfere planetarie.', fact: 'Ha scoperto geyser su Tritone, luna di Nettuno.' },
+      { year: 1997, name: 'Mars Pathfinder', target: 'Marte', type: 'Rover', description: 'Introduce il piccolo rover Sojourner, dimostrando mobilita' + "'" + ' robotica su Marte.', impact: 'Anticipa l’era dei rover avanzati Spirit, Opportunity, Curiosity e Perseverance.', fact: 'Sojourner pesava circa 10,6 kg.' },
+      { year: 2004, name: 'Cassini-Huygens', target: 'Saturno', type: 'Orbiter + lander', description: 'Missione internazionale su Saturno; Huygens atterra su Titano.', impact: 'Conferma mari di metano su Titano e attivita' + "'" + ' criovulcanica in ambienti estremi.', fact: 'Titano e' + "'" + ' l’unica luna con atmosfera densa nel Sistema Solare.' },
+      { year: 2015, name: 'New Horizons', target: 'Plutone', type: 'Flyby', description: 'Primo sorvolo ravvicinato di Plutone e Caronte.', impact: 'Mostra un mondo geologicamente complesso, non un corpo “morto”.', fact: 'Il “cuore” di Plutone e' + "'" + ' una vasta pianura di azoto ghiacciato.' },
+      { year: 2021, name: 'Perseverance', target: 'Marte', type: 'Rover', description: 'Raccoglie campioni e testa tecnologie per future missioni umane, incluso il volo su Marte con Ingenuity.', impact: 'Passo chiave verso il sample return e la preparazione di missioni con equipaggio.', fact: 'Ingenuity ha dimostrato il primo volo controllato su un altro pianeta.' },
+      { year: 2023, name: 'JUICE', target: 'Giove', type: 'Orbiter', description: 'Missione ESA per studiare le lune ghiacciate Ganimede, Callisto ed Europa.', impact: 'Indaga ambienti potenzialmente abitabili oltre la zona terrestre.', fact: 'Ganimede e' + "'" + ' la luna piu' + "'" + ' grande del Sistema Solare.' }
+    ];
+
+    const planets = {
+      Mercurio: { dist: 8, size: 0.35, color: 0xb1b1b1, speed: 0.018 },
+      Venere: { dist: 11, size: 0.6, color: 0xd9a066, speed: 0.014 },
+      Terra: { dist: 14, size: 0.64, color: 0x4f83ff, speed: 0.012 },
+      Marte: { dist: 17, size: 0.5, color: 0xc75c3a, speed: 0.010 },
+      Giove: { dist: 23, size: 1.8, color: 0xd7b58a, speed: 0.006 },
+      Saturno: { dist: 29, size: 1.55, color: 0xe2cf99, speed: 0.0048 },
+      Urano: { dist: 35, size: 1.1, color: 0x89d8e6, speed: 0.0035 },
+      Nettuno: { dist: 41, size: 1.05, color: 0x5f86ff, speed: 0.0029 },
+      Plutone: { dist: 46, size: 0.28, color: 0xb18a6b, speed: 0.0025 }
+    };
+
+    const sceneRoot = document.getElementById('scene');
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setSize(sceneRoot.clientWidth, sceneRoot.clientHeight);
+    sceneRoot.appendChild(renderer.domElement);
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x030712);
+
+    const camera = new THREE.PerspectiveCamera(55, sceneRoot.clientWidth / sceneRoot.clientHeight, 0.1, 200);
+    camera.position.set(0, 20, 60);
+
+    scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+    const light = new THREE.PointLight(0xffffff, 1.9, 250);
+    light.position.set(0, 0, 0);
+    scene.add(light);
+
+    const sun = new THREE.Mesh(
+      new THREE.SphereGeometry(2.6, 32, 32),
+      new THREE.MeshBasicMaterial({ color: 0xffc857 })
+    );
+    scene.add(sun);
+
+    const planetMeshes = {};
+    const orbitAnchors = {};
+
+    Object.entries(planets).forEach(([name, p]) => {
+      const orbitGeo = new THREE.RingGeometry(p.dist - 0.03, p.dist + 0.03, 128);
+      const orbit = new THREE.Mesh(orbitGeo, new THREE.MeshBasicMaterial({ color: 0x1f2937, side: THREE.DoubleSide }));
+      orbit.rotation.x = Math.PI / 2;
+      scene.add(orbit);
+
+      const anchor = new THREE.Object3D();
+      scene.add(anchor);
+      orbitAnchors[name] = anchor;
+
+      const mesh = new THREE.Mesh(
+        new THREE.SphereGeometry(p.size, 24, 24),
+        new THREE.MeshStandardMaterial({ color: p.color, roughness: 0.8, metalness: 0.05 })
+      );
+      mesh.position.set(p.dist, 0, 0);
+      anchor.add(mesh);
+      planetMeshes[name] = mesh;
+
+      if (name === 'Saturno') {
+        const ring = new THREE.Mesh(
+          new THREE.RingGeometry(2.1, 3.0, 48),
+          new THREE.MeshBasicMaterial({ color: 0xbca16d, side: THREE.DoubleSide, transparent: true, opacity: 0.7 })
+        );
+        ring.rotation.x = Math.PI / 2.5;
+        mesh.add(ring);
+      }
+    });
+
+    const stars = new THREE.Points(
+      new THREE.BufferGeometry().setAttribute(
+        'position',
+        new THREE.Float32BufferAttribute(Array.from({ length: 2000 }, () => (Math.random() - 0.5) * 300), 3)
+      ),
+      new THREE.PointsMaterial({ size: 0.35, color: 0xffffff })
+    );
+    scene.add(stars);
+
+    let highlighted = null;
+    function setHighlight(target) {
+      highlighted = target;
+      document.getElementById('targetPlanet').textContent = target || 'Nessuno';
+      Object.entries(planetMeshes).forEach(([name, mesh]) => {
+        mesh.material.emissive = new THREE.Color(name === target ? 0x2d2d55 : 0x000000);
+        mesh.scale.setScalar(name === target ? 1.2 : 1);
+      });
+    }
+
+    const timeline = document.getElementById('timeline');
+    const card = document.getElementById('card');
+    const emptyState = document.getElementById('emptyState');
+
+    missions.sort((a, b) => a.year - b.year).forEach((m) => {
+      const btn = document.createElement('button');
+      btn.className = 'timeline-item w-full text-left border border-gray-800 rounded-lg p-3 hover:border-indigo-400 transition-colors';
+      btn.innerHTML = `
+        <p class="text-sm text-indigo-300">${m.year} · ${m.type}</p>
+        <p class="font-medium text-gray-100">${m.name}</p>
+        <p class="text-sm text-gray-400">Target: ${m.target}</p>
+      `;
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.timeline-item').forEach((el) => el.classList.remove('active'));
+        btn.classList.add('active');
+
+        document.getElementById('mTitle').textContent = m.name;
+        document.getElementById('mMeta').textContent = `${m.year} · ${m.type} · Target: ${m.target}`;
+        document.getElementById('mDesc').textContent = m.description;
+        document.getElementById('mImpact').textContent = `Perche' conta: ${m.impact}`;
+        document.getElementById('mFact').textContent = m.fact;
+        emptyState.classList.add('hidden');
+        card.classList.remove('hidden');
+
+        setHighlight(planets[m.target] ? m.target : null);
+      });
+      timeline.appendChild(btn);
+    });
+
+    function animate(t) {
+      const time = t * 0.001;
+      sun.scale.setScalar(1 + Math.sin(time * 2) * 0.03);
+      stars.rotation.y += 0.00015;
+
+      Object.entries(planets).forEach(([name, p]) => {
+        orbitAnchors[name].rotation.y = time * (p.speed * 9);
+      });
+
+      if (!highlighted) {
+        camera.position.x = Math.sin(time * 0.14) * 4;
+        camera.lookAt(0, 0, 0);
+      } else {
+        const targetMesh = planetMeshes[highlighted];
+        const wp = targetMesh.getWorldPosition(new THREE.Vector3());
+        camera.position.lerp(new THREE.Vector3(wp.x + 10, 10, wp.z + 12), 0.015);
+        camera.lookAt(wp);
+      }
+
+      renderer.render(scene, camera);
+      requestAnimationFrame(animate);
+    }
+    requestAnimationFrame(animate);
+
+    window.addEventListener('resize', () => {
+      camera.aspect = sceneRoot.clientWidth / sceneRoot.clientHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(sceneRoot.clientWidth, sceneRoot.clientHeight);
+    });
+  </script>
+</body>
+</html>
