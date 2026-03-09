@@ -55,7 +55,7 @@
   <script>
     const missions = [
       { year: 1959, name: 'Luna 2', target: 'Terra', type: 'Impatto lunare', description: 'Primo oggetto costruito dall’uomo a raggiungere la superficie della Luna.', impact: 'Apre la fase operativa dell’esplorazione del Sistema Solare.', fact: 'La Luna dista in media 384.400 km dalla Terra.' },
-      { year: 1969, name: 'Apollo 11', target: 'Terra', type: 'Missione umana', description: 'Primo allunaggio con equipaggio umano: Armstrong e Aldrin camminano sulla Luna.', impact: 'Dimostra la possibilita' + "'" + ' di missioni umane fuori dall’orbita terrestre.', fact: 'Il modulo Eagle atterra nel Mare della Tranquillita'.' },
+      { year: 1969, name: 'Apollo 11', target: 'Terra', type: 'Missione umana', description: 'Primo allunaggio con equipaggio umano: Armstrong e Aldrin camminano sulla Luna.', impact: 'Dimostra la possibilita' + "'" + ' di missioni umane fuori dall’orbita terrestre.', fact: 'Il modulo Eagle atterra nel Mare della Tranquillita.' },
       { year: 1976, name: 'Viking 1', target: 'Marte', type: 'Lander', description: 'Prima missione di lunga durata sulla superficie marziana con dati e immagini dettagliate.', impact: 'Costruisce le basi della geologia marziana moderna.', fact: 'Viking 1 ha operato sulla superficie per oltre 6 anni terrestri.' },
       { year: 1977, name: 'Voyager 2', target: 'Nettuno', type: 'Flyby multiplo', description: 'Sorvola Giove, Saturno, Urano e Nettuno, unica sonda ad aver visitato tutti i giganti esterni.', impact: 'Rivoluziona la visione delle lune ghiacciate e delle atmosfere planetarie.', fact: 'Ha scoperto geyser su Tritone, luna di Nettuno.' },
       { year: 1997, name: 'Mars Pathfinder', target: 'Marte', type: 'Rover', description: 'Introduce il piccolo rover Sojourner, dimostrando mobilita' + "'" + ' robotica su Marte.', impact: 'Anticipa l’era dei rover avanzati Spirit, Opportunity, Curiosity e Perseverance.', fact: 'Sojourner pesava circa 10,6 kg.' },
@@ -77,78 +77,9 @@
       Plutone: { dist: 46, size: 0.28, color: 0xb18a6b, speed: 0.0025 }
     };
 
-    const sceneRoot = document.getElementById('scene');
-    const renderer = new THREE.WebGLRenderer({ antialias: true });
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    renderer.setSize(sceneRoot.clientWidth, sceneRoot.clientHeight);
-    sceneRoot.appendChild(renderer.domElement);
-
-    const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x030712);
-
-    const camera = new THREE.PerspectiveCamera(55, sceneRoot.clientWidth / sceneRoot.clientHeight, 0.1, 200);
-    camera.position.set(0, 20, 60);
-
-    scene.add(new THREE.AmbientLight(0xffffff, 0.6));
-    const light = new THREE.PointLight(0xffffff, 1.9, 250);
-    light.position.set(0, 0, 0);
-    scene.add(light);
-
-    const sun = new THREE.Mesh(
-      new THREE.SphereGeometry(2.6, 32, 32),
-      new THREE.MeshBasicMaterial({ color: 0xffc857 })
-    );
-    scene.add(sun);
-
-    const planetMeshes = {};
-    const orbitAnchors = {};
-
-    Object.entries(planets).forEach(([name, p]) => {
-      const orbitGeo = new THREE.RingGeometry(p.dist - 0.03, p.dist + 0.03, 128);
-      const orbit = new THREE.Mesh(orbitGeo, new THREE.MeshBasicMaterial({ color: 0x1f2937, side: THREE.DoubleSide }));
-      orbit.rotation.x = Math.PI / 2;
-      scene.add(orbit);
-
-      const anchor = new THREE.Object3D();
-      scene.add(anchor);
-      orbitAnchors[name] = anchor;
-
-      const mesh = new THREE.Mesh(
-        new THREE.SphereGeometry(p.size, 24, 24),
-        new THREE.MeshStandardMaterial({ color: p.color, roughness: 0.8, metalness: 0.05 })
-      );
-      mesh.position.set(p.dist, 0, 0);
-      anchor.add(mesh);
-      planetMeshes[name] = mesh;
-
-      if (name === 'Saturno') {
-        const ring = new THREE.Mesh(
-          new THREE.RingGeometry(2.1, 3.0, 48),
-          new THREE.MeshBasicMaterial({ color: 0xbca16d, side: THREE.DoubleSide, transparent: true, opacity: 0.7 })
-        );
-        ring.rotation.x = Math.PI / 2.5;
-        mesh.add(ring);
-      }
-    });
-
-    const stars = new THREE.Points(
-      new THREE.BufferGeometry().setAttribute(
-        'position',
-        new THREE.Float32BufferAttribute(Array.from({ length: 2000 }, () => (Math.random() - 0.5) * 300), 3)
-      ),
-      new THREE.PointsMaterial({ size: 0.35, color: 0xffffff })
-    );
-    scene.add(stars);
-
-    let highlighted = null;
-    function setHighlight(target) {
-      highlighted = target;
+    let setHighlight = (target) => {
       document.getElementById('targetPlanet').textContent = target || 'Nessuno';
-      Object.entries(planetMeshes).forEach(([name, mesh]) => {
-        mesh.material.emissive = new THREE.Color(name === target ? 0x2d2d55 : 0x000000);
-        mesh.scale.setScalar(name === target ? 1.2 : 1);
-      });
-    }
+    };
 
     const timeline = document.getElementById('timeline');
     const card = document.getElementById('card');
@@ -179,35 +110,116 @@
       timeline.appendChild(btn);
     });
 
-    function animate(t) {
-      const time = t * 0.001;
-      sun.scale.setScalar(1 + Math.sin(time * 2) * 0.03);
-      stars.rotation.y += 0.00015;
+    try {
+      if (!window.THREE) throw new Error('Three.js non disponibile');
+
+      const sceneRoot = document.getElementById('scene');
+      const renderer = new THREE.WebGLRenderer({ antialias: true });
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      renderer.setSize(sceneRoot.clientWidth, sceneRoot.clientHeight);
+      sceneRoot.appendChild(renderer.domElement);
+
+      const scene = new THREE.Scene();
+      scene.background = new THREE.Color(0x030712);
+
+      const camera = new THREE.PerspectiveCamera(55, sceneRoot.clientWidth / sceneRoot.clientHeight, 0.1, 200);
+      camera.position.set(0, 20, 60);
+
+      scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+      const light = new THREE.PointLight(0xffffff, 1.9, 250);
+      light.position.set(0, 0, 0);
+      scene.add(light);
+
+      const sun = new THREE.Mesh(
+        new THREE.SphereGeometry(2.6, 32, 32),
+        new THREE.MeshBasicMaterial({ color: 0xffc857 })
+      );
+      scene.add(sun);
+
+      const planetMeshes = {};
+      const orbitAnchors = {};
 
       Object.entries(planets).forEach(([name, p]) => {
-        orbitAnchors[name].rotation.y = time * (p.speed * 9);
+        const orbitGeo = new THREE.RingGeometry(p.dist - 0.03, p.dist + 0.03, 128);
+        const orbit = new THREE.Mesh(orbitGeo, new THREE.MeshBasicMaterial({ color: 0x1f2937, side: THREE.DoubleSide }));
+        orbit.rotation.x = Math.PI / 2;
+        scene.add(orbit);
+
+        const anchor = new THREE.Object3D();
+        scene.add(anchor);
+        orbitAnchors[name] = anchor;
+
+        const mesh = new THREE.Mesh(
+          new THREE.SphereGeometry(p.size, 24, 24),
+          new THREE.MeshStandardMaterial({ color: p.color, roughness: 0.8, metalness: 0.05 })
+        );
+        mesh.position.set(p.dist, 0, 0);
+        anchor.add(mesh);
+        planetMeshes[name] = mesh;
+
+        if (name === 'Saturno') {
+          const ring = new THREE.Mesh(
+            new THREE.RingGeometry(2.1, 3.0, 48),
+            new THREE.MeshBasicMaterial({ color: 0xbca16d, side: THREE.DoubleSide, transparent: true, opacity: 0.7 })
+          );
+          ring.rotation.x = Math.PI / 2.5;
+          mesh.add(ring);
+        }
       });
 
-      if (!highlighted) {
-        camera.position.x = Math.sin(time * 0.14) * 4;
-        camera.lookAt(0, 0, 0);
-      } else {
-        const targetMesh = planetMeshes[highlighted];
-        const wp = targetMesh.getWorldPosition(new THREE.Vector3());
-        camera.position.lerp(new THREE.Vector3(wp.x + 10, 10, wp.z + 12), 0.015);
-        camera.lookAt(wp);
+      const stars = new THREE.Points(
+        new THREE.BufferGeometry().setAttribute(
+          'position',
+          new THREE.Float32BufferAttribute(Array.from({ length: 2000 }, () => (Math.random() - 0.5) * 300), 3)
+        ),
+        new THREE.PointsMaterial({ size: 0.35, color: 0xffffff })
+      );
+      scene.add(stars);
+
+      let highlighted = null;
+      setHighlight = (target) => {
+        highlighted = target;
+        document.getElementById('targetPlanet').textContent = target || 'Nessuno';
+        Object.entries(planetMeshes).forEach(([name, mesh]) => {
+          mesh.material.emissive = new THREE.Color(name === target ? 0x2d2d55 : 0x000000);
+          mesh.scale.setScalar(name === target ? 1.2 : 1);
+        });
+      };
+
+      function animate(t) {
+        const time = t * 0.001;
+        sun.scale.setScalar(1 + Math.sin(time * 2) * 0.03);
+        stars.rotation.y += 0.00015;
+
+        Object.entries(planets).forEach(([name, p]) => {
+          orbitAnchors[name].rotation.y = time * (p.speed * 9);
+        });
+
+        if (!highlighted) {
+          camera.position.x = Math.sin(time * 0.14) * 4;
+          camera.lookAt(0, 0, 0);
+        } else {
+          const targetMesh = planetMeshes[highlighted];
+          const wp = targetMesh.getWorldPosition(new THREE.Vector3());
+          camera.position.lerp(new THREE.Vector3(wp.x + 10, 10, wp.z + 12), 0.015);
+          camera.lookAt(wp);
+        }
+
+        renderer.render(scene, camera);
+        requestAnimationFrame(animate);
       }
-
-      renderer.render(scene, camera);
       requestAnimationFrame(animate);
-    }
-    requestAnimationFrame(animate);
 
-    window.addEventListener('resize', () => {
-      camera.aspect = sceneRoot.clientWidth / sceneRoot.clientHeight;
-      camera.updateProjectionMatrix();
-      renderer.setSize(sceneRoot.clientWidth, sceneRoot.clientHeight);
-    });
+      window.addEventListener('resize', () => {
+        camera.aspect = sceneRoot.clientWidth / sceneRoot.clientHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(sceneRoot.clientWidth, sceneRoot.clientHeight);
+      });
+    } catch (err) {
+      const sceneRoot = document.getElementById('scene');
+      sceneRoot.innerHTML = '<div class="h-full w-full grid place-items-center text-sm text-gray-400">Anteprima 3D non disponibile su questo browser/dispositivo.</div>';
+      console.warn('Fallback 3D:', err?.message || err);
+    }
   </script>
 </body>
 </html>
